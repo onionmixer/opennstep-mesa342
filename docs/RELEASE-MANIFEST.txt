@@ -9,3 +9,4 @@ upstream_sha256=b02b5f77321175820b9955b07979d9f8c5d52e146eecc719844380ef2849ddd6
 build_command=make CC='cc -m486' openstep
 libraries=libGL.a libGLU.a
 osmesa_library=libGL.a
+installer_packages=OpenStepMesa342Libraries.pkg OpenStepMesa342Headers.pkg OpenStepMesa342Demos.pkg

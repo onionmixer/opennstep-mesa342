@@ -1,7 +1,8 @@
 # Linking an OPENSTEP Mesa consumer
 
-Install the package into a prefix, normally `/LocalDeveloper`, then compile
-using only that installed prefix:
+Install `OpenStepMesa342Libraries.pkg` and `OpenStepMesa342Headers.pkg` into
+the same prefix, normally `/LocalDeveloper`, then compile using only that
+installed prefix:
 
 ```text
 cc -m486 -I<prefix>/Headers program.c -L<prefix>/Libraries -lGL -lm

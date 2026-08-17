@@ -1,9 +1,9 @@
-Title OPENSTEP Mesa 3.4.2 Headers and Examples (Intel i486)
+Title OPENSTEP Mesa 3.4.2 Headers and Documentation (Intel i486)
 Version 3.4.2-openstep.1
-Description Intel i486-only Mesa OpenGL headers, documentation and OSMesa examples for OPENSTEP 4.2.
+Description Intel i486-only Mesa OpenGL headers and documentation for OPENSTEP 4.2.
 DefaultLocation /LocalDeveloper
 Relocatable YES
 Application NO
 UseUserMask NO
 DiskName OPENSTEP Mesa Headers
-DeleteWarning Removing this package removes Mesa headers, documentation and examples from the selected development prefix.
+DeleteWarning Removing this package removes Mesa headers and documentation from the selected development prefix.

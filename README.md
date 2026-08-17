@@ -3,10 +3,12 @@
 An **Intel i486-only** OPENSTEP 4.2 port of Mesa 3.4.2 for static OpenGL 1.2,
 GLU and OSMesa development. The package is deliberately separate from SDL2.
 
-The public deliverable is an OPENSTEP Installer package named
-`OpenStepMesa342.pkg`. It installs into a user-selected development prefix
-(default `/LocalDeveloper`) and provides `Headers/GL`, `Libraries/libGL.a`
-and `Libraries/libGLU.a`.
+The public deliverable is three independently installable OPENSTEP Installer
+packages: `OpenStepMesa342Libraries.pkg`, `OpenStepMesa342Headers.pkg` and
+`OpenStepMesa342Demos.pkg`. They install into one user-selected development
+prefix (default `/LocalDeveloper`). Libraries provides `libGL.a` and
+`libGLU.a`; Headers provides `Headers/GL` and documentation; Demos provides
+the rebuildable OSMesaClear and original OPENSTEP MesaView examples.
 
 The Installer title explicitly identifies the Intel i486 target. The archives
 contain i386 Mach-O members produced by `cc -m486`. Because Installer does not
@@ -28,13 +30,15 @@ Mount or otherwise make this source directory available to the target, then:
 ```text
 csh -f build/stage-openstep-mesa342.csh /ndrv
 csh -f build/build-openstep-mesa342.csh
-csh -f packaging/openstep/build-package.csh
+csh -f packaging/openstep/build-split-packages.csh
 csh -f packaging/openstep/verify-package.csh
 ```
 
-The final directory package is written below `/tmp/OpenStepMesa342/dist/`.
-The release process wraps that directory in an outer `.pkg.tar.gz` only after
-Installer install/delete and consumer tests pass.
+The three final directory packages are written below
+`/tmp/OpenStepMesa342/dist/`. The release process wraps each directory in an
+outer `.pkg.tar.gz` only after Installer install/delete and consumer tests
+pass. Install Libraries and Headers at the same prefix before rebuilding or
+running a demo; Demos is optional.
 
 See [docs/PORT-NOTES.md](docs/PORT-NOTES.md) and
 [docs/LINKING.md](docs/LINKING.md) for the supported scope and link order.
