@@ -8,7 +8,10 @@ packages: `OpenStepMesa342Libraries.pkg`, `OpenStepMesa342Headers.pkg` and
 `OpenStepMesa342Demos.pkg`. They install into one user-selected development
 prefix (default `/LocalDeveloper`). Libraries provides `libGL.a` and
 `libGLU.a`; Headers provides `Headers/GL` and documentation; Demos provides
-the rebuildable OSMesaClear and original OPENSTEP MesaView examples.
+the rebuildable OSMesaClear and original OPENSTEP MesaView examples. MesaView
+is delivered as `MesaView.app`, including its generated
+`Resources/Info-nextstep.plist` and nib resources, so it can be launched by
+the OPENSTEP Workspace rather than as an unbundled executable.
 
 The Installer title explicitly identifies the Intel i486 target. The archives
 contain i386 Mach-O members produced by `cc -m486`. Because Installer does not

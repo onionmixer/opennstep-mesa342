@@ -35,7 +35,7 @@ if (! -r $hunpack/Headers/GL/gl.h || ! -r $hunpack/Headers/GL/osmesa.h || ! -r $
     echo "verify-mesa-package: Headers payload is incomplete"
     exit 1
 endif
-if (! -r $dunpack/Examples/OpenStep-Mesa-3.4.2/OSMesaClear/osmesa-clear.c || ! -r $dunpack/Examples/OpenStep-Mesa-3.4.2/OSMesaClear/build-osmesa-clear.csh || ! -r $dunpack/Examples/OpenStep-Mesa-3.4.2/OSMesaClear/osmesa-clear || ! -r $dunpack/Examples/OpenStep-Mesa-3.4.2/MesaView/MesaView.m || ! -r $dunpack/Examples/OpenStep-Mesa-3.4.2/MesaView/English.lproj/MesaView.nib/objects.nib || ! -r $dunpack/Examples/OpenStep-Mesa-3.4.2/MesaView/build-mesaview.csh || ! -r $dunpack/Examples/OpenStep-Mesa-3.4.2/MesaView/MesaView || ! -r $dunpack/Tools/OpenStepMesa342Demos-Intel) then
+if (! -r $dunpack/Examples/Mesa342/OSMesaClear/osmesa-clear.c || ! -r $dunpack/Examples/Mesa342/OSMesaClear/build-osmesa-clear.csh || ! -r $dunpack/Examples/Mesa342/OSMesaClear/osmesa-clear || ! -r $dunpack/Examples/Mesa342/MesaView/PB.project || ! -r $dunpack/Examples/Mesa342/MesaView/MesaView.m || ! -r $dunpack/Examples/Mesa342/MesaView/English.lproj/MesaView.nib/objects.nib || ! -r $dunpack/Examples/Mesa342/MesaView/build-mesaview.csh || ! -r $dunpack/Examples/Mesa342/MesaView/MesaView.app/MesaView || ! -r $dunpack/Examples/Mesa342/MesaView/MesaView.app/Resources/Info-nextstep.plist || ! -r $dunpack/Examples/Mesa342/MesaView/MesaView.app/Resources/English.lproj/MesaView.nib/objects.nib || ! -r $dunpack/Tools/OpenStepMesa342Demos-Intel) then
     echo "verify-mesa-package: Demos payload is incomplete"
     exit 1
 endif
@@ -50,7 +50,7 @@ ar p $lunpack/Libraries/libGL.a osmesa.o > $osmesa_member
 if ($status != 0) exit 1
 nm $osmesa_member | grep OSMesaCreateContext > /dev/null
 if ($status != 0) exit 1
-foreach binary ( $lunpack/Tools/OpenStepMesa342-Intel $hunpack/Tools/OpenStepMesa342Headers-Intel $dunpack/Tools/OpenStepMesa342Demos-Intel $dunpack/Examples/OpenStep-Mesa-3.4.2/OSMesaClear/osmesa-clear $dunpack/Examples/OpenStep-Mesa-3.4.2/MesaView/MesaView )
+foreach binary ( $lunpack/Tools/OpenStepMesa342-Intel $hunpack/Tools/OpenStepMesa342Headers-Intel $dunpack/Tools/OpenStepMesa342Demos-Intel $dunpack/Examples/Mesa342/OSMesaClear/osmesa-clear $dunpack/Examples/Mesa342/MesaView/MesaView.app/MesaView )
     file $binary | grep i386 > /dev/null
     if ($status != 0) then
         echo "verify-mesa-package: non-i386 binary $binary"

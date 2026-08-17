@@ -65,3 +65,32 @@ non-i386 machine.
 
 The remaining verification is runtime execution and Installer deletion
 isolation; neither is claimed by this record.
+
+## 2026-08-17 — Installed Demos runtime and source-rebuild verification
+
+The first Demos package placed the MesaView executable beside its source nib.
+That is not an OPENSTEP application bundle: `NSApplicationMain` logged `No
+NSPrincipalClass specified in info dictionary` and exited.  The package was
+corrected to build and install `Examples/Mesa342/MesaView/MesaView.app`, with
+the original `PB.project`, source nib and generated
+`Resources/Info-nextstep.plist`.  `Examples/Mesa342/` intentionally keeps all
+bundle resource paths short enough for the native historical Installer tar.
+
+The corrected Demos package was rebuilt from a clean target stage, passed
+`verify-package.csh`, installed at `/LocalDeveloper`, and then passed:
+
+1. `OSMesaClear/osmesa-clear` executed directly with exit status 0.
+2. `MesaView/MesaView.app/MesaView` was launched through GCD, visibly rendered
+   and closed without an AppKit log error or a remaining process.
+3. Installed source and scripts rebuilt without source-stage paths:
+
+   ```text
+   csh -f build-osmesa-clear.csh /LocalDeveloper
+   csh -f build-mesaview.csh /LocalDeveloper
+   ```
+
+4. The source-rebuilt `MesaView.app` was launched through GCD, visibly
+   rendered again and closed cleanly.
+
+Installer deletion isolation remains a separate, intentionally unperformed
+release gate.
