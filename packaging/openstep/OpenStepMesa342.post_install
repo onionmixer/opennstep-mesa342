@@ -1,0 +1,25 @@
+#!/bin/csh -f
+# OPENSTEP ar stores archive path information in its table of contents.
+# Installer extraction changes that path, so rebuild the index only after the
+# payload has reached the user's chosen prefix.
+
+if ($#argv != 2) then
+    echo "FAILED (unexpected Installer arguments)"
+    exit 1
+endif
+
+set prefix = $argv[2]
+foreach archive ( $prefix/Libraries/libGL.a $prefix/Libraries/libGLU.a )
+    if (! -r $archive) then
+        echo "FAILED (missing $archive)"
+        exit 1
+    endif
+    ranlib $archive
+    if ($status != 0) then
+        echo "FAILED (ranlib $archive)"
+        exit 1
+    endif
+end
+
+echo "OK (reindexed Intel i486 Mesa static archives)"
+exit 0

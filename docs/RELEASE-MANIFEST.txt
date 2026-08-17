@@ -1,0 +1,11 @@
+product=OPENSTEP Mesa 3.4.2
+port_revision=3.4.2-openstep.1
+target_os=OPENSTEP 4.2
+target_cpu=i486
+binary_architecture=Mach-O i386 only
+installer_architecture_selector=i386-only marker plus non-i386 pre-install refusal
+upstream_archive=MesaLib-3.4.2.tar.gz
+upstream_sha256=b02b5f77321175820b9955b07979d9f8c5d52e146eecc719844380ef2849ddd6
+build_command=make CC='cc -m486' openstep
+libraries=libGL.a libGLU.a
+osmesa_library=libGL.a

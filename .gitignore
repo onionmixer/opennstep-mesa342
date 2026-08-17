@@ -1,0 +1,5 @@
+dist/
+stage/
+*.o
+*~
+.DS_Store

@@ -1,0 +1,14 @@
+Headers/GL/gl.h
+Headers/GL/glext.h
+Headers/GL/glu.h
+Headers/GL/glu_mangle.h
+Headers/GL/osmesa.h
+Libraries/libGL.a
+Libraries/libGLU.a
+Tools/OpenStepMesa342-Intel
+Documentation/OpenStep-Mesa-3.4.2/README.OPENSTEP
+Documentation/OpenStep-Mesa-3.4.2/COPYRIGHT
+Documentation/OpenStep-Mesa-3.4.2/COPYING
+Documentation/OpenStep-Mesa-3.4.2/PORT-NOTES.md
+Documentation/OpenStep-Mesa-3.4.2/LINKING.md
+Documentation/OpenStep-Mesa-3.4.2/RELEASE-MANIFEST.txt

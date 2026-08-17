@@ -1,0 +1,9 @@
+Title OPENSTEP Mesa 3.4.2 Libraries (Intel i486)
+Version 3.4.2-openstep.1
+Description Intel i486-only static OpenGL 1.2, GLU and OSMesa libraries for OPENSTEP 4.2.
+DefaultLocation /LocalDeveloper
+Relocatable YES
+Application NO
+UseUserMask NO
+DiskName OPENSTEP Mesa Libraries Intel
+DeleteWarning Removing this package removes Mesa static libraries from the selected development prefix.

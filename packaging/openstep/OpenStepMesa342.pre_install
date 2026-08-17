@@ -1,0 +1,9 @@
+#!/bin/csh -f
+# Keep the i386-only Installer choice enforceable through nonstandard paths.
+
+set actual_arch = `/usr/bin/arch`
+if ("$actual_arch" != "i386") then
+    echo "OPENSTEP Mesa 3.4.2 installs only on Intel i386/i486 computers."
+    exit 1
+endif
+exit 0
