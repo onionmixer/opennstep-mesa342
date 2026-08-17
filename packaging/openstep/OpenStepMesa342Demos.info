@@ -1,0 +1,9 @@
+Title OPENSTEP Mesa 3.4.2 Demos (Intel i486)
+Version 3.4.2-openstep.1
+Description Intel i486-only Mesa 3.4.2 demo source and binaries for OPENSTEP 4.2.
+DefaultLocation /LocalDeveloper
+Relocatable YES
+Application NO
+UseUserMask NO
+DiskName OPENSTEP Mesa Demos Intel
+DeleteWarning Removing this package removes Mesa demo source, build scripts and binaries from the selected development prefix.

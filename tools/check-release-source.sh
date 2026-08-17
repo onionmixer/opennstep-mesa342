@@ -28,7 +28,9 @@ for file in \
     "$root/packaging/openstep/OpenStepMesa342.post_install" \
     "$root/packaging/openstep/OpenStepMesa342Libraries.info" \
     "$root/packaging/openstep/OpenStepMesa342Headers.info" \
+    "$root/packaging/openstep/OpenStepMesa342Demos.info" \
     "$root/packaging/openstep/OpenStepMesa342Headers.pre_install" \
+    "$root/packaging/openstep/OpenStepMesa342Demos.pre_install" \
     "$root/packaging/openstep/installer-architecture-marker.c" \
     "$root/packaging/openstep/build-split-packages.csh" \
     "$root/packaging/openstep/PAYLOAD_MANIFEST.txt" \
@@ -39,7 +41,8 @@ for file in \
     "$root/test/openstep/package-mesa-consumer.c" \
     "$root/test/openstep/build-package-mesa-consumer.csh" \
     "$root/examples/osmesa-clear.c" \
-    "$root/examples/build-osmesa-clear.csh"
+    "$root/examples/build-osmesa-clear.csh" \
+    "$root/examples/build-mesaview.csh"
 do
     require_file "$file"
 done
@@ -52,7 +55,8 @@ fi
 
 for info in \
     "$root/packaging/openstep/OpenStepMesa342Libraries.info" \
-    "$root/packaging/openstep/OpenStepMesa342Headers.info"
+    "$root/packaging/openstep/OpenStepMesa342Headers.info" \
+    "$root/packaging/openstep/OpenStepMesa342Demos.info"
 do
     for field in Title Version Description DefaultLocation Relocatable Application UseUserMask DiskName DeleteWarning
     do

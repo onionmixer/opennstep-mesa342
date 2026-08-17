@@ -10,7 +10,7 @@ set source_root = $argv[1]/opennstep-mesa342
 set stage_root = /tmp/OpenStepMesa342
 set stage_source = $stage_root/src
 
-if (! -r $source_root/upstream/Mesa-3.4.2/Make-config || ! -r $source_root/packaging/openstep/build-split-packages.csh || ! -r $source_root/packaging/openstep/OpenStepMesa342Libraries.info || ! -r $source_root/packaging/openstep/OpenStepMesa342Headers.info || ! -r $source_root/packaging/openstep/OpenStepMesa342.pre_install || ! -r $source_root/packaging/openstep/OpenStepMesa342Headers.pre_install || ! -r $source_root/packaging/openstep/OpenStepMesa342.post_install || ! -r $source_root/examples/osmesa-clear.c || ! -r $source_root/build/build-openstep-mesa342.csh || ! -r $source_root/test/openstep/build-package-mesa-consumer.csh) then
+if (! -r $source_root/upstream/Mesa-3.4.2/Make-config || ! -r $source_root/packaging/openstep/build-split-packages.csh || ! -r $source_root/packaging/openstep/OpenStepMesa342Libraries.info || ! -r $source_root/packaging/openstep/OpenStepMesa342Headers.info || ! -r $source_root/packaging/openstep/OpenStepMesa342Demos.info || ! -r $source_root/packaging/openstep/OpenStepMesa342.pre_install || ! -r $source_root/packaging/openstep/OpenStepMesa342Headers.pre_install || ! -r $source_root/packaging/openstep/OpenStepMesa342Demos.pre_install || ! -r $source_root/packaging/openstep/OpenStepMesa342.post_install || ! -r $source_root/examples/osmesa-clear.c || ! -r $source_root/examples/build-mesaview.csh || ! -r $source_root/build/build-openstep-mesa342.csh || ! -r $source_root/test/openstep/build-package-mesa-consumer.csh) then
     echo "stage-openstep-mesa342: source root is incomplete: $source_root"
     exit 2
 endif
