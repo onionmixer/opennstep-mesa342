@@ -49,6 +49,44 @@
 #include "extensions.h"
 #endif
 
+#ifdef OPENSTEP_MESA_ACCEL_HOOK
+/*
+ * A hook for an accelerated back end, named after no particular one.  The
+ * declaration is here rather than in a header so that this tree needs
+ * nothing from whoever supplies the implementation, and so that a build
+ * without the macro is the stock object it always was.
+ */
+extern void OpenStepMesaAccelUpdateState( GLcontext *ctx, int rowLength,
+                                          int yUp );
+
+/*
+ * A back end may render into memory of its own rather than the caller's --
+ * a card's, for instance, so that its hardware and this software rasteriser
+ * accumulate into one surface.  It returns the buffer to use, or null to
+ * leave the caller's alone, and sets the stride that buffer must have.
+ */
+extern void *OpenStepMesaAccelBuffer( void *ctx, void *buffer,
+                                      int width, int height,
+                                      int rshift, int gshift, int bshift,
+                                      int appRowLength, int *rowLength );
+
+/*
+ * And a depth buffer, for the same reason: this driver's software depth
+ * testing and a back end's hardware one have to look at the same memory or
+ * a frame drawn partly by each is wrong wherever they disagree.  Returns
+ * memory laid out as this driver addresses depth -- Width values per row --
+ * or null to leave it to the software allocator.
+ */
+extern void *OpenStepMesaAccelDepthBuffer( void *ctx, int width, int height,
+                                           int bytesPerValue );
+
+/*
+ * Give back whatever the calls above handed out, and take back anything put
+ * into the context, before the context's own memory is released.
+ */
+extern void OpenStepMesaAccelReleaseBuffer( void *ctx );
+#endif
+
 
 /*
  * This is the OS/Mesa context struct.
@@ -271,6 +309,21 @@ OSMesaCreateContext( GLenum format, OSMesaContext sharelist )
 void GLAPIENTRY OSMesaDestroyContext( OSMesaContext ctx )
 {
    if (ctx) {
+#ifdef OPENSTEP_MESA_ACCEL_HOOK
+      /*
+       * Whatever the back end handed out goes back here.  Without this the
+       * first context destroyed took the only drawing surface with it and
+       * nothing in the process could be accelerated again.
+       */
+      /*
+       * Before gl_destroy_framebuffer, which frees the depth buffer without
+       * asking whose it is.  Ours did not come from malloc, so it is taken
+       * out of the framebuffer first.
+       */
+      if (ctx->gl_buffer && !ctx->gl_buffer->UseSoftwareDepthBuffer)
+         ctx->gl_buffer->DepthBuffer = NULL;
+      OpenStepMesaAccelReleaseBuffer( (void *) ctx );
+#endif
       gl_destroy_visual( ctx->gl_visual );
       gl_destroy_framebuffer( ctx->gl_buffer );
       gl_free_context_data( &ctx->gl_ctx );
@@ -387,7 +440,106 @@ OSMesaMakeCurrent( OSMesaContext ctx, void *buffer, GLenum type,
    else
       ctx->rowlength = width;
 
+#ifdef OPENSTEP_MESA_ACCEL_HOOK
+   {
+      int accelRow = 0;
+      /*
+       * The shifts go with it.  A back end writing into this surface has to
+       * lay a pixel out the way this driver does, and the layout is chosen
+       * by the caller when the context is made -- so it is told rather than
+       * assumed.  A back end that packs differently declines here instead of
+       * writing colours in the wrong order into a surface it shares.
+       */
+      void *accelBuf = OpenStepMesaAccelBuffer( (void *) ctx, buffer,
+                                                (int) width, (int) height,
+                                                (int) ctx->rshift,
+                                                (int) ctx->gshift,
+                                                (int) ctx->bshift,
+                                                (int) ctx->rowlength,
+                                                &accelRow );
+      if (accelBuf) {
+         /*
+          * Depth as well, and only when the colour surface was taken: a
+          * depth buffer shared with a colour buffer that is not would put
+          * the two halves of a frame in different places again.
+          *
+          * UseSoftwareDepthBuffer is cleared so that the software allocator
+          * neither allocates over this nor frees it on the next resize --
+          * it frees whatever the pointer holds, and this one did not come
+          * from malloc.
+          */
+         void *accelDepth =
+            OpenStepMesaAccelDepthBuffer( (void *) ctx, (int) width,
+                                          (int) height,
+                                          ctx->gl_visual->DepthBits <= 16
+                                             ? 2 : 4 );
+         if (accelDepth) {
+            if (ctx->gl_buffer->DepthBuffer)
+               FREE( ctx->gl_buffer->DepthBuffer );
+            ctx->gl_buffer->DepthBuffer = accelDepth;
+            ctx->gl_buffer->UseSoftwareDepthBuffer = GL_FALSE;
+         }
+         /*
+          * And alpha lives in the surface rather than beside it.  This driver
+          * asks for a separate alpha buffer whenever the visual has alpha
+          * bits, and then overwrites the alpha it just read from the colour
+          * buffer with what that buffer holds -- so a back end writing alpha
+          * into the fourth byte, as this hardware does, would find its alpha
+          * ignored by every blend.  Turning it off makes both sides read and
+          * write the one place.  Any buffers already allocated are left to be
+          * freed normally; they simply stop being consulted.
+          */
+         if (ctx->gl_visual->AlphaBits > 0 && ctx->format != OSMESA_RGB
+             && ctx->format != OSMESA_BGR
+             && ctx->format != OSMESA_COLOR_INDEX) {
+            ctx->gl_buffer->UseSoftwareAlphaBuffers = GL_FALSE;
+            /*
+             * And the raster flags have to be worked out again.  ALPHABUF_BIT
+             * was computed while the flag was still set, and half a dozen
+             * write paths -- the pixel buffer's, blending's, the logic op's,
+             * colour masking's -- consult that bit rather than the flag, so a
+             * stale one sends them writing into a buffer nothing consults any
+             * more.  Marking the state dirty makes the next update agree with
+             * what was just changed.
+             */
+            ctx->gl_ctx.NewState |= NEW_RASTER_OPS;
+         }
+         ctx->buffer = accelBuf;
+         /*
+          * rowlength, not userRowLength: that one belongs to the caller,
+          * through OSMesaPixelStore, and overwriting it would both misreport
+          * what the caller asked for and leave a stride behind that outlives
+          * the substitution.  A caller that does set its own stride simply
+          * stops matching what the back end needs, and the back end declines.
+          */
+         if (accelRow > 0)
+            ctx->rowlength = accelRow;
+      }
+   }
+#endif
+
    compute_row_addresses( ctx );
+
+#ifdef OPENSTEP_MESA_ACCEL_HOOK
+   /*
+    * Row length and orientation both reach a back end sharing this surface,
+    * and changing them here changed neither -- only the row addresses were
+    * recomputed, so a back end that had already decided what it could draw
+    * went on drawing the old way into a buffer laid out the new way.
+    */
+   osmesa_update_state( &ctx->gl_ctx );
+#endif
+
+#ifdef OPENSTEP_MESA_ACCEL_HOOK
+   /*
+    * Again, now that the buffer exists.  The update above ran before it did,
+    * so a back end that decides what it can do by looking at where it will
+    * draw had nothing to look at and refused; without this the first binding
+    * always rendered in software and only some later, unrelated state change
+    * would have started accelerating.
+    */
+   osmesa_update_state( &ctx->gl_ctx );
+#endif
 
    /* init viewport */
    if (ctx->gl_ctx.Viewport.Width==0) {
@@ -1600,6 +1752,24 @@ static void osmesa_update_state( GLcontext *ctx )
    ctx->Driver.PointsFunc = NULL;
    ctx->Driver.LineFunc = choose_line_function( ctx );
    ctx->Driver.TriangleFunc = choose_triangle_function( ctx );
+
+#ifdef OPENSTEP_MESA_ACCEL_HOOK
+   /*
+    * After this driver has chosen, never instead of it.  A back end is
+    * expected to replace the choice only for states it can draw and to leave
+    * every other one exactly as it found it.  Compiled in only when the
+    * macro is defined; without it this file is unchanged.
+    */
+   /*
+    * The stride and the orientation go with it.  A back end drawing into the
+    * same surface has to lay its rows out the way this driver does, and the
+    * orientation is not fixed -- OSMesaPixelStore can turn it over after the
+    * context is current -- so it is passed every time rather than sampled
+    * once.
+    */
+   OpenStepMesaAccelUpdateState( ctx, (int) osmesa->rowlength,
+                                 osmesa->yup ? 1 : 0 );
+#endif
 
 
    /* RGB(A) span/pixel functions */
