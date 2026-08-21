@@ -44,19 +44,29 @@ endif
 if (-d "$stage_root") rm -rf "$stage_root"
 mkdir "$stage_root"
 mkdir "$stage_source"
-cp -R $source_root/upstream/Mesa-3.4.2 $stage_source/
-cp -R $source_root/build $stage_source/
-cp -R $source_root/packaging $stage_source/
-cp -R $source_root/docs $stage_source/
-cp -R $source_root/examples $stage_source/
-cp -R $source_root/test $stage_source/
-cp $source_root/NOTICE_OPENSTEP_PORT.md $stage_source/
-cp $source_root/COPYRIGHT $stage_source/
-cp $source_root/COPYING $stage_source/
-if ($status != 0) then
-    echo "stage-openstep-mesa342: copy failed"
-    exit 1
-endif
+#
+# Every copy is checked, not only the last one.
+#
+# A single test after the final cp reports whatever that one did and says
+# nothing about the eight before it, so an early failure followed by a late
+# success looked like a complete tree.  While the copy lived under /tmp a
+# restart swept the remains away; anywhere that survives, a half-copied tree
+# would sit there waiting to be believed.
+#
+foreach item ( upstream/Mesa-3.4.2 build packaging docs examples test )
+    cp -R $source_root/$item $stage_source/
+    if ($status != 0) then
+        echo "stage-openstep-mesa342: copying $item failed"
+        exit 1
+    endif
+end
+foreach item ( NOTICE_OPENSTEP_PORT.md COPYRIGHT COPYING )
+    cp $source_root/$item $stage_source/
+    if ($status != 0) then
+        echo "stage-openstep-mesa342: copying $item failed"
+        exit 1
+    endif
+end
 
 #
 # A mark that every copy above finished.
