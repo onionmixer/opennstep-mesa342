@@ -85,6 +85,20 @@ extern void *OpenStepMesaAccelDepthBuffer( void *ctx, int width, int height,
  * into the context, before the context's own memory is released.
  */
 extern void OpenStepMesaAccelReleaseBuffer( void *ctx );
+
+/* Whether this context is the one drawing into the substituted surface --
+ * which is not the same as owning it, since a refused rebind leaves the owner
+ * set while Mesa goes back to the application's buffer. */
+extern int OpenStepMesaAccelBoundTo( const void *ctx );
+
+/* The buffer the application gave, to put back when the substitution ends. */
+extern void *OpenStepMesaAccelAppBuffer( void );
+
+/* Copy whatever has been drawn back into that buffer. */
+extern void OpenStepMesaAccelMirror( void );
+
+/* How wide the substituted surface's rows are, in pixels. */
+extern unsigned long OpenStepMesaAccelStride( void );
 #endif
 
 
@@ -306,6 +320,63 @@ OSMesaCreateContext( GLenum format, OSMesaContext sharelist )
  *
  * Input:  ctx - the context to destroy
  */
+#ifdef OPENSTEP_MESA_ACCEL_HOOK
+/*
+ * Give the substituted surface back and put this context on its own buffer.
+ *
+ * Declining to accelerate is not enough on its own.  The buffer is still the
+ * back end's memory, so the software rasteriser goes on writing there -- and
+ * after a row length changes it writes at the new spacing into an allocation
+ * made for the old one, then the copy back reads it at the old spacing again.
+ * What has to happen is the substitution run backwards.
+ *
+ * The order is not free.  Anything drawn since the last copy back has to be
+ * copied while the mapping and the application's pointer are both still
+ * known, or a program that drew without calling glFinish loses it.  And the
+ * depth pointer has to be cleared before the software allocator is allowed
+ * near it, because that allocator frees whatever it finds and this one did
+ * not come from the heap.
+ *
+ * The caller sets ctx->buffer and recomputes the row addresses afterwards;
+ * doing it here would mean guessing which of the two callers this is.
+ */
+static void
+osmesa_leave_accel( OSMesaContext ctx )
+{
+   /*
+    * No test of the binding here.  One caller asks before the allocator has
+    * run and the other after, and the allocator releases the binding as its
+    * first act -- so a guard in here would be true for one caller and false
+    * for the other, for reasons that have nothing to do with whether there is
+    * anything to undo.  Each caller decides; this one does the undoing.
+    */
+   OpenStepMesaAccelMirror();
+
+   if (ctx->gl_buffer && !ctx->gl_buffer->UseSoftwareDepthBuffer) {
+      ctx->gl_buffer->DepthBuffer = NULL;
+      ctx->gl_buffer->UseSoftwareDepthBuffer = GL_TRUE;
+      _mesa_alloc_depth_buffer( &ctx->gl_ctx );
+   }
+
+   /*
+    * The software alpha buffers are deliberately NOT turned back on.
+    *
+    * Turning them on was tried and the first clear after it died: they are
+    * allocated when a buffer is sized, that sizing happens after the
+    * substitution has already turned the flag off, and so they were never
+    * allocated at all.  Setting the flag then points the clear at nothing.
+    *
+    * Leaving them off is also the right answer rather than merely the safe
+    * one.  They were turned off because alpha lives in the fourth byte of the
+    * pixel rather than beside it, and that is still true of the buffer the
+    * application gave us -- which is where everything is about to be drawn.
+    */
+
+   OpenStepMesaAccelReleaseBuffer( (void *) ctx );
+}
+#endif
+
+
 void GLAPIENTRY OSMesaDestroyContext( OSMesaContext ctx )
 {
    if (ctx) {
@@ -444,6 +515,12 @@ OSMesaMakeCurrent( OSMesaContext ctx, void *buffer, GLenum type,
    {
       int accelRow = 0;
       /*
+       * Whether this context was drawing into the surface before this call,
+       * asked BEFORE the allocator runs -- its first act is to let the
+       * binding go, so afterwards the answer is no whatever happened.
+       */
+      int wasBound = OpenStepMesaAccelBoundTo( (void *) ctx );
+      /*
        * The shifts go with it.  A back end writing into this surface has to
        * lay a pixel out the way this driver does, and the layout is chosen
        * by the caller when the context is made -- so it is told rather than
@@ -457,6 +534,16 @@ OSMesaMakeCurrent( OSMesaContext ctx, void *buffer, GLenum type,
                                                 (int) ctx->bshift,
                                                 (int) ctx->rowlength,
                                                 &accelRow );
+      /*
+       * Refused, and this context had a surface a moment ago -- a rebind at
+       * a size the one surface cannot be, most often.  ctx->buffer is already
+       * the application's again, set above, but the depth buffer, the alpha
+       * flag and the copy-back wrappers are still the substitution's, and
+       * nothing else puts them back.
+       */
+      if (!accelBuf && wasBound)
+         osmesa_leave_accel( ctx );
+
       if (accelBuf) {
          /*
           * Depth as well, and only when the colour surface was taken: a
@@ -474,7 +561,15 @@ OSMesaMakeCurrent( OSMesaContext ctx, void *buffer, GLenum type,
                                           ctx->gl_visual->DepthBits <= 16
                                              ? 2 : 4 );
          if (accelDepth) {
-            if (ctx->gl_buffer->DepthBuffer)
+            /*
+             * Free only what came from the heap.  Binding the same context at
+             * the same size again hands back the SAME mapping, and this line
+             * used to free it -- vm_allocate memory, through the heap's free,
+             * which ends the process.  The software flag is the record of
+             * whose pointer it is.
+             */
+            if (ctx->gl_buffer->DepthBuffer
+                && ctx->gl_buffer->UseSoftwareDepthBuffer)
                FREE( ctx->gl_buffer->DepthBuffer );
             ctx->gl_buffer->DepthBuffer = accelDepth;
             ctx->gl_buffer->UseSoftwareDepthBuffer = GL_FALSE;
@@ -577,7 +672,12 @@ void GLAPIENTRY OSMesaPixelStore( GLint pname, GLint value )
             return;
          }
          ctx->userRowLength = value;
-         ctx->rowlength = value;
+         /*
+          * Zero means the image width, which is what the header has always
+          * said and what OSMesaMakeCurrent already does with this same value.
+          * Storing the zero made every row start at the base of the buffer.
+          */
+         ctx->rowlength = value ? value : ctx->width;
          break;
       case OSMESA_Y_UP:
          ctx->yup = value ? GL_TRUE : GL_FALSE;
@@ -587,7 +687,49 @@ void GLAPIENTRY OSMesaPixelStore( GLint pname, GLint value )
          return;
    }
 
+#ifdef OPENSTEP_MESA_ACCEL_HOOK
+   /*
+    * A layout the substituted surface cannot carry ends the substitution.
+    *
+    * Before the row addresses are worked out, not after: they would otherwise
+    * be worked out over memory about to be handed back, and the next software
+    * triangle would write where nothing is mapped.
+    *
+    * The comparison is against the row length in effect, so that a caller
+    * setting the value it already had does not throw a surface away for
+    * nothing.
+    */
+   if (OpenStepMesaAccelBoundTo( (void *) ctx )
+       && ((GLint) OpenStepMesaAccelStride() != ctx->rowlength || !ctx->yup)) {
+      /* Taken BEFORE the release, which forgets it. */
+      void *app = OpenStepMesaAccelAppBuffer();
+
+      osmesa_leave_accel( ctx );
+      if (app)
+         ctx->buffer = app;
+   }
+#endif
+
    compute_row_addresses( ctx );
+
+#ifdef OPENSTEP_MESA_ACCEL_HOOK
+   /*
+    * Two things, and both are needed.
+    *
+    * The direct call is what takes the copy-back wrappers off NOW.  Nothing
+    * else resets them, and a glFinish before the next draw would otherwise
+    * copy a surface that has been handed back.
+    *
+    * Marking the state is what gets the triangle function chosen again
+    * properly.  A direct call cannot do that on its own: gl_update_state
+    * clears Driver.TriangleFunc before it asks the driver, and going straight
+    * to the driver skips that -- measured, a triangle was still dispatched to
+    * the back end afterwards, refused by the kernel, and acceleration revoked
+    * for the rest of the process.
+    */
+   osmesa_update_state( &ctx->gl_ctx );
+   ctx->gl_ctx.NewState |= NEW_ALL;
+#endif
 }
 
 
