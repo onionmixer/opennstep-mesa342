@@ -790,7 +790,23 @@ void GLAPIENTRY OSMesaGetIntegerv( GLint pname, GLint *value )
          *value = GL_UNSIGNED_BYTE;
          return;
       case OSMESA_ROW_LENGTH:
+#ifdef OPENSTEP_MESA_ACCEL_HOOK
+         /*
+          * What the CALLER'S buffer is laid out at, which is not always what
+          * this context draws at.
+          *
+          * The header defines this value as "actual pixels per row in image
+          * buffer", and while a back end has substituted a surface of its own
+          * the internal rowlength is that surface's -- padded up to whatever
+          * the hardware can walk, which the caller's array is not.  Handing
+          * that number back would be a lie in the one direction that hurts:
+          * an application putting it straight back through PixelStore would
+          * be describing rows it does not own.
+          */
+         *value = ctx->userRowLength ? ctx->userRowLength : (GLint) ctx->width;
+#else
          *value = ctx->rowlength;
+#endif
          return;
       case OSMESA_Y_UP:
          *value = ctx->yup;
@@ -852,6 +868,36 @@ OSMesaGetColorBuffer( OSMesaContext c, GLint *width,
       return GL_FALSE;
    }
    else {
+#ifdef OPENSTEP_MESA_ACCEL_HOOK
+      /*
+       * The caller's own buffer, brought up to date -- not the substituted
+       * surface.
+       *
+       * c->buffer is video memory while a back end has taken the surface, and
+       * this call hands back a pointer with a width and a height and no way
+       * to learn a stride.  Unpadded that was merely unhelpful; padded it is
+       * wrong, because the rows are further apart than the width and anything
+       * treating the result as tightly packed reads a sheared picture.
+       *
+       * So the surface is walked back into the application's array first and
+       * that is what is returned.  It costs a copy, which a query has no
+       * business hiding -- but the alternative is handing back memory the
+       * caller cannot address correctly, and the row length reported beside
+       * it is the caller's own.
+       */
+      if (OpenStepMesaAccelBoundTo( (void *) c )) {
+         void *app = OpenStepMesaAccelAppBuffer();
+
+         if (app) {
+            OpenStepMesaAccelMirror();
+            *width = c->width;
+            *height = c->height;
+            *format = c->format;
+            *buffer = app;
+            return GL_TRUE;
+         }
+      }
+#endif
       *width = c->width;
       *height = c->height;
       *format = c->format;
