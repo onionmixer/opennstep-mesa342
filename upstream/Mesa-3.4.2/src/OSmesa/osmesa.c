@@ -93,6 +93,13 @@ extern int OpenStepMesaAccelBoundTo( const void *ctx );
 
 /* The buffer the application gave, to put back when the substitution ends. */
 extern void *OpenStepMesaAccelAppBuffer( void );
+/*
+ * The shared depth into a buffer of Mesa's own, for the moment the surface
+ * goes back.  Returns zero when it declines, and then the caller has the
+ * uninitialised buffer it would have had anyway.
+ */
+extern int OpenStepMesaAccelCopyDepth( void *dst, int width, int height,
+                                       int bytesPerValue );
 
 /* Copy whatever has been drawn back into that buffer. */
 extern void OpenStepMesaAccelMirror( void );
@@ -356,6 +363,22 @@ osmesa_leave_accel( OSMesaContext ctx )
       ctx->gl_buffer->DepthBuffer = NULL;
       ctx->gl_buffer->UseSoftwareDepthBuffer = GL_TRUE;
       _mesa_alloc_depth_buffer( &ctx->gl_ctx );
+      /*
+       * And what was IN it.  Mesa's allocator says in its own comment that
+       * it does not initialise the buffer, so without this the depth an
+       * application had rendered becomes whatever malloc handed over -- the
+       * colour survives this moment and the depth did not.  Nothing in GL
+       * says a pixel-store call empties the depth buffer.
+       *
+       * Here rather than anywhere else because this is the last point at
+       * which both exist: the release below is what unmaps the surface.
+       */
+      if (ctx->gl_buffer->DepthBuffer)
+         (void) OpenStepMesaAccelCopyDepth(
+                   ctx->gl_buffer->DepthBuffer,
+                   (int) ctx->gl_buffer->Width,
+                   (int) ctx->gl_buffer->Height,
+                   (ctx->gl_visual->DepthBits <= 16) ? 2 : 4 );
    }
 
    /*
