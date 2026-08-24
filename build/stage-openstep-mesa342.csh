@@ -25,7 +25,13 @@ set source_root = $argv[1]/opennstep-mesa342
 # name longer than 18 characters with "Variable syntax." and nothing else.
 # Measured on the machine -- 18 works, 19 does not.
 #
-if (! $?MESA_STAGE_PARENT) setenv MESA_STAGE_PARENT /tmp
+#
+# The default is the local disk, not /tmp.  /tmp is emptied at boot, so a
+# staged tree there had to be rebuilt after every restart -- about a
+# quarter of an hour each time, for a tree that never changes.  Set the
+# variable to /tmp explicitly for a genuinely one-off build.
+#
+if (! $?MESA_STAGE_PARENT) setenv MESA_STAGE_PARENT /usr/local/mesastage
 switch ("$MESA_STAGE_PARENT")
 case /*:
     breaksw
