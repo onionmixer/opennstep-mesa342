@@ -106,6 +106,14 @@ extern void OpenStepMesaAccelMirror( void );
 
 /* How wide the substituted surface's rows are, in pixels. */
 extern unsigned long OpenStepMesaAccelStride( void );
+
+/*
+ * What this port's software clear would write for the current clear colour.
+ * A back end that clears on hardware needs the exact word to deliver a
+ * cleared surface without reading it back, and must not pack it a second
+ * time for itself.
+ */
+extern void OpenStepMesaAccelClearPixel( void *ctx, unsigned long word );
 #endif
 
 
@@ -624,6 +632,14 @@ OSMesaMakeCurrent( OSMesaContext ctx, void *buffer, GLenum type,
          }
          ctx->buffer = accelBuf;
          /*
+          * And the clear word again, now that this context owns the surface.
+          * Without this a context that never calls glClearColor has never
+          * told the back end anything, and the back end cannot tell "the
+          * default clear colour" from "some other context's".
+          */
+         OpenStepMesaAccelClearPixel( (void *) ctx,
+                                      (unsigned long) ctx->clearpixel );
+         /*
           * rowlength, not userRowLength: that one belongs to the caller,
           * through OSMesaPixelStore, and overwriting it would both misreport
           * what the caller asked for and leave a stride behind that outlives
@@ -907,6 +923,22 @@ static void clear_color( GLcontext *ctx,
 {
    OSMesaContext osmesa = (OSMesaContext) ctx;
    osmesa->clearpixel = PACK_RGBA( r, g, b, a );
+#ifdef OPENSTEP_MESA_ACCEL_HOOK
+   /*
+    * And tell the back end, because it needs this exact word and must not
+    * work it out for itself.
+    *
+    * A back end that clears on hardware can deliver a cleared surface to the
+    * caller by writing one value rather than by reading the surface back --
+    * but only if it has the value.  Reading it out of the surface is the
+    * obvious way and is the wrong way here: a client's first read after a
+    * submission can still hold what was there before the draw.  Packing it
+    * again at the other end would mean a second place that has to know how a
+    * pixel is laid out, which is how the two come to disagree.  So the one
+    * place that computes it says what it computed.
+    */
+   OpenStepMesaAccelClearPixel( (void *) ctx, (unsigned long) osmesa->clearpixel );
+#endif
 }
 
 
