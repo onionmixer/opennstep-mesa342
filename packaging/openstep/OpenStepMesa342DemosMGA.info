@@ -1,0 +1,9 @@
+Title OPENSTEP Mesa 3.4.2 Demos with Matrox demos (Intel i486)
+Version 3.4.2-openstep.1+mga.1
+Description Intel i486-only Mesa 3.4.2 demo source and binaries for OPENSTEP 4.2, plus two demos from the Matrox G450 driver project. Everything in the plain Demos package is here unchanged; the additions are Examples/Mesa342/Teapot and Examples/Mesa342/GLWindow. Each holds ONE source, its build script, its own README, and TWO binaries built from that source -- a _sw form linked against the stock Mesa library and containing no Matrox code, and a _hybrid form linked against libGL_mga.a from OpenStepMGAMesaAccel. teapot_hybrid writes a file and runs with or without that package and without the driver; where it finds neither it renders entirely in software. glwin_hybrid draws in a window and NEEDS the driver, because its picture reaches the screen by a kernel blit; without it the window opens, says so in its title and stays empty. glwin_sw is the member of that pair which runs anywhere. The Mesa LIBRARIES and HEADERS packages are not affected by this variant in any way. Install this package or OpenStepMesa342Demos, not both.
+DefaultLocation /LocalDeveloper
+Relocatable YES
+Application NO
+UseUserMask NO
+DiskName OPENSTEP Mesa Demos MGA Intel
+DeleteWarning Removing this package removes Mesa demo source, build scripts and binaries, including both Matrox demo pairs, from the selected development prefix.
