@@ -3,3 +3,8 @@ stage/
 *.o
 *~
 .DS_Store
+
+# 릴리스 자산은 GitHub 릴리스에 붙는 것이지 git 에 담는 것이 아니다.
+# 형제 저장소(openstep-matrox-remade)의 규약과 같다.
+release-assets/
+build/release-pkgs/
