@@ -6,7 +6,7 @@ if ($#argv != 1) then
     exit 2
 endif
 
-set source_root = $argv[1]/opennstep-mesa342
+set source_root = $argv[1]/openstep-mesa342
 #
 # Where the staging tree lives.  A PARENT, never the tree itself: this script
 # removes that tree before copying, and a variable naming the tree outright
